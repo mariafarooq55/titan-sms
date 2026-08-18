@@ -1,4 +1,4 @@
-# Titan SMS — Starter
+# Titan Student Management System
 
 FastAPI (Python) + MongoDB backend, React + Tailwind frontend. Login,
 JWT auth, and the server-side permission system are wired up end to end.
@@ -29,10 +29,10 @@ cp .env.example .env
 # edit .env: set MONGO_URI (and JWT_SECRET to something random)
 
 python -m app.seed               # creates the 4 test logins below
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
-API now running at http://localhost:8000 — check http://localhost:8000/docs
+API now running at http://localhost:8001 — check http://localhost:8001/docs
 for interactive Swagger docs (test every endpoint here before touching the
 frontend).
 
@@ -43,7 +43,7 @@ cd client
 npm install
 
 cp .env.example .env
-# default VITE_API_URL=http://localhost:8000 is already correct
+# default VITE_API_URL=http://localhost:8001 is already correct
 
 npm run dev
 ```
@@ -54,10 +54,10 @@ App running at http://localhost:5173
 
 | Role | Login ID | Password |
 |---|---|---|
-| Super Admin | superadmin@titan.com | Passw0rd! |
-| Sub Admin (limited) | reception@titan.com | Passw0rd! |
-| Trainer | trainer@titan.com | Passw0rd! |
-| Student | 4230112223334 | Passw0rd! |
+| Super Admin | superadmin@titan.com | admin123 |
+| Sub Admin (limited) | reception@titan.com | sukkur123 |
+| Trainer | erum@titan.com | erum123 |
+| Student | 4550927459826 | laiba123 |
 
 Log in as each one and confirm you land on the right portal (`/admin`,
 `/trainer`, `/student`) and can't reach the others by editing the URL.
