@@ -16,7 +16,8 @@ const NAV = [
   { label: "Students", href: "/admin/students", icon: IconUsers },
   { label: "Attendance", href: "/admin/attendance", icon: IconCheckSquare },
   { label: "Slots", href: "/admin/slots", icon: IconCalendar },
-  { label: "Trainers", href: "/admin/trainers", icon: IconUser },
+  { label: "Trainers", href: "/admin/trainers", icon: IconUsers },
+  { label: "Setup", href: "/admin/setup", icon: IconEdit },
   { label: "Updation", href: "/admin/updation", icon: IconEdit },
   { label: "Profile", href: "/admin/profile", icon: IconUser },
 ];

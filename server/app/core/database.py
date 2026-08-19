@@ -12,8 +12,9 @@ from app.models.voucher import Voucher
 from app.models.assignment import Assignment
 from app.models.submission import Submission
 from app.models.quiz import Quiz, QuizAttempt
+from app.models.setup import Country, City, Campus, Course
 
-# Add every new Beanie Document model to this list as you build features
+
 DOCUMENT_MODELS = [
     User,
     Student,
@@ -26,10 +27,20 @@ DOCUMENT_MODELS = [
     Submission,
     Quiz,
     QuizAttempt,
+
+    # Setup
+    Country,
+    City,
+    Campus,
+    Course,
 ]
 
 
 async def init_db() -> None:
     client = AsyncIOMotorClient(settings.mongo_uri)
     database = client[settings.mongo_db_name]
-    await init_beanie(database=database, document_models=DOCUMENT_MODELS)
+
+    await init_beanie(
+        database=database,
+        document_models=DOCUMENT_MODELS,
+    )

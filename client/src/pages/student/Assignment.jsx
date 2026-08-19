@@ -2,6 +2,25 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import PortalLayout from "../../components/PortalLayout";
 import api from "../../api/client";
+import {
+  IconGrid,
+  IconBook,
+  IconCheckSquare,
+  IconIdCard,
+  IconEdit,
+  IconFileText,
+  IconUser,
+} from "../../components/icons";
+
+const NAV = [
+  { label: "Dashboard", href: "/student", icon: IconGrid },
+  { label: "Progress", href: "/student/progress", icon: IconBook },
+  { label: "Attendance", href: "/student/attendance", icon: IconCheckSquare },
+  { label: "Payment", href: "/student/payment", icon: IconIdCard },
+  { label: "Assignment", href: "/student/assignment", icon: IconEdit },
+  { label: "Quiz", href: "/student/quiz", icon: IconFileText },
+  { label: "Profile", href: "/student/profile", icon: IconUser },
+];
 
 function formatStatus(status) {
   if (!status) return "Not Submitted";
@@ -37,7 +56,12 @@ function statusClass(status) {
 }
 
 export default function StudentAssignment() {
-  const { slotId } = useParams();
+  const { slotId: routeSlotId } = useParams();
+
+  const [enrollments, setEnrollments] = useState([]);
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
+  const [enrollmentsError, setEnrollmentsError] = useState("");
+  const [selectedSlotId, setSelectedSlotId] = useState(routeSlotId || "");
 
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,9 +73,33 @@ export default function StudentAssignment() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
-  async function loadAssignments() {
+  // Step 1: load the student's own enrollments so we know which course(s)
+  // they're in — the "Assignment" nav link has no slot in the URL, so we
+  // can't rely on the route param alone.
+  useEffect(() => {
+    api
+      .get("/api/me/enrollments")
+      .then(({ data }) => {
+        const items = data?.items || [];
+        setEnrollments(items);
+
+        if (routeSlotId) {
+          setSelectedSlotId(routeSlotId);
+        } else if (items.length > 0) {
+          setSelectedSlotId(items[0].slot_id);
+        }
+      })
+      .catch((err) =>
+        setEnrollmentsError(
+          err.response?.data?.detail || "Could not load your courses.",
+        ),
+      )
+      .finally(() => setEnrollmentsLoading(false));
+  }, [routeSlotId]);
+
+  async function loadAssignments(slotId) {
     if (!slotId) {
-      setError("No course slot was found.");
+      setAssignments([]);
       setLoading(false);
       return;
     }
@@ -66,21 +114,24 @@ export default function StudentAssignment() {
         },
       });
 
-      console.log("Student assignments:", response.data);
-
       setAssignments(response.data?.items || []);
     } catch (err) {
       console.error("Failed to load assignments:", err);
-
       setError(err.response?.data?.detail || "Could not load assignments.");
     } finally {
       setLoading(false);
     }
   }
 
+  // Step 2: once we know which slot to show, load its assignments.
   useEffect(() => {
-    loadAssignments();
-  }, [slotId]);
+    if (selectedSlotId) {
+      loadAssignments(selectedSlotId);
+    } else if (!enrollmentsLoading) {
+      // No enrollments at all — nothing to load, don't show a scary error.
+      setLoading(false);
+    }
+  }, [selectedSlotId, enrollmentsLoading]);
 
   function openAssignment(assignment) {
     setSelectedAssignment(assignment);
@@ -121,7 +172,7 @@ export default function StudentAssignment() {
 
       setSubmitMessage("Assignment submitted successfully.");
 
-      await loadAssignments();
+      await loadAssignments(selectedSlotId);
 
       setTimeout(() => {
         closeAssignment();
@@ -137,6 +188,8 @@ export default function StudentAssignment() {
     }
   }
 
+  const showCourseSwitcher = enrollments.length > 1;
+
   return (
     <PortalLayout
       title="Student Portal"
@@ -144,26 +197,37 @@ export default function StudentAssignment() {
         {
           label: "Dashboard",
           href: "/student",
+          icon: IconGrid,
         },
         {
           label: "Progress",
           href: "/student/progress",
+          icon: IconBook,
         },
         {
           label: "Attendance",
           href: "/student/attendance",
+          icon: IconCheckSquare,
         },
         {
           label: "Payment",
           href: "/student/payment",
+          icon: IconIdCard,
         },
         {
           label: "Assignment",
-          href: slotId ? `/student/assignment/${slotId}` : "/student",
+          href: "/student/assignment",
+          icon: IconEdit,
         },
         {
           label: "Quiz",
           href: "/student/quiz",
+          icon: IconFileText,
+        },
+        {
+          label: "Profile",
+          href: "/student/profile",
+          icon: IconUser,
         },
       ]}
     >
@@ -175,29 +239,71 @@ export default function StudentAssignment() {
         </p>
       </div>
 
+      {enrollmentsError && (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {enrollmentsError}
+        </div>
+      )}
+
+      {!enrollmentsLoading && enrollments.length === 0 && !enrollmentsError && (
+        <div className="bg-white border border-slate-200 rounded-xl p-10 text-center">
+          <div className="text-4xl mb-3">📚</div>
+          <h2 className="font-semibold text-slate-800">
+            You're not enrolled in any course yet
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Once the office enrolls you in a course, assignments will show up
+            here.
+          </p>
+        </div>
+      )}
+
+      {showCourseSwitcher && (
+        <div className="mb-5">
+          <label className="block text-xs font-medium text-slate-500 mb-1">
+            Course
+          </label>
+          <select
+            value={selectedSlotId}
+            onChange={(e) => setSelectedSlotId(e.target.value)}
+            className="w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+          >
+            {enrollments.map((e) => (
+              <option key={e.slot_id} value={e.slot_id}>
+                {e.course} — {e.campus}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {error && (
         <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      {loading && (
+      {(loading || enrollmentsLoading) && enrollments.length !== 0 && (
         <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
           <p className="text-sm text-slate-400">Loading assignments...</p>
         </div>
       )}
 
-      {!loading && !error && assignments.length === 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl p-10 text-center">
-          <div className="text-4xl mb-3">📚</div>
+      {!loading &&
+        !enrollmentsLoading &&
+        !error &&
+        selectedSlotId &&
+        assignments.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl p-10 text-center">
+            <div className="text-4xl mb-3">📚</div>
 
-          <h2 className="font-semibold text-slate-800">No assignments yet</h2>
+            <h2 className="font-semibold text-slate-800">No assignments yet</h2>
 
-          <p className="text-sm text-slate-500 mt-1">
-            Your trainer has not added any assignments for this course yet.
-          </p>
-        </div>
-      )}
+            <p className="text-sm text-slate-500 mt-1">
+              Your trainer has not added any assignments for this course yet.
+            </p>
+          </div>
+        )}
 
       {!loading && assignments.length > 0 && (
         <div className="space-y-4">
@@ -258,7 +364,7 @@ export default function StudentAssignment() {
 
                   <button
                     onClick={() => openAssignment(assignment)}
-                    className="bg-titan-500 hover:bg-titan-600 text-white text-sm font-medium px-4 py-2 rounded-md"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md"
                   >
                     View Assignment
                   </button>
@@ -278,7 +384,7 @@ export default function StudentAssignment() {
                         href={link}
                         target="_blank"
                         rel="noreferrer"
-                        className="block text-sm text-titan-600 hover:underline break-all"
+                        className="block text-sm text-blue-600 hover:underline break-all"
                       >
                         {link}
                       </a>
@@ -356,7 +462,7 @@ export default function StudentAssignment() {
                         href={link}
                         target="_blank"
                         rel="noreferrer"
-                        className="block text-sm text-titan-600 hover:underline break-all"
+                        className="block text-sm text-blue-600 hover:underline break-all"
                       >
                         {link}
                       </a>
@@ -383,7 +489,7 @@ export default function StudentAssignment() {
                     placeholder={
                       "https://github.com/...\nhttps://drive.google.com/..."
                     }
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-titan-500 focus:border-titan-500"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                   />
 
                   {submitMessage && (
@@ -404,7 +510,7 @@ export default function StudentAssignment() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="bg-titan-500 hover:bg-titan-600 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-md"
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-md"
                     >
                       {submitting ? "Submitting..." : "Submit Assignment"}
                     </button>

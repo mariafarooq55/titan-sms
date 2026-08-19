@@ -19,8 +19,8 @@ from app.routers import (
     trainer,
     voucher,
     updation,
+    setup,
 )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -64,7 +64,7 @@ app.include_router(trainer.router)
 # Coursework APIs (Assignments, Submissions, Quizzes) — shared by both portals
 app.include_router(student_me.router)
 
-
+app.include_router(setup.router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
